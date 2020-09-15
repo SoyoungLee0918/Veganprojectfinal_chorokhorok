@@ -20,6 +20,7 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.core.content.FileProvider;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentActivity;
 
@@ -72,9 +73,12 @@ public class dinnerFragment extends Fragment implements View.OnClickListener {
     String fileName;   //  fileName - 돌고 도는 선택된 날짜의 파일 이름
     String path_photo = Environment.getExternalStorageDirectory().getAbsolutePath() + "/diary_image";
     String imageFileName;
+    String str;
+
     int flag = 0;
     File directory = new File(path_photo);
     File[] files = directory.listFiles();
+    Button sharebtn;
 
 
 
@@ -163,10 +167,10 @@ public class dinnerFragment extends Fragment implements View.OnClickListener {
         int cMonth = intent.getExtras().getInt("month");
         int cDay = intent.getExtras().getInt("day");
 
-        int year = intent.getExtras().getInt("s_year");
+        final int year = intent.getExtras().getInt("s_year");
         int monthOfYear = intent.getExtras().getInt("s_month");
         monthOfYear=monthOfYear+1;
-        int dayOfMonth = intent.getExtras().getInt("s_day");
+        final int dayOfMonth = intent.getExtras().getInt("s_day");
 
         datePicker = (DatePicker) root.findViewById(R.id.datePicker);
         viewDatePick = (TextView) root.findViewById(R.id.diary_date);
@@ -174,6 +178,7 @@ public class dinnerFragment extends Fragment implements View.OnClickListener {
         btnSave = (Button) root.findViewById(R.id.diary_save_btn);
         //   dbmanger = new DB_Manger();
         iv_UserPhoto = (ImageView) this.root.findViewById(R.id.user_image);
+        sharebtn = (Button) root.findViewById(R.id.share);
 
 
         checkDangerousPermissions();
@@ -266,8 +271,38 @@ public class dinnerFragment extends Fragment implements View.OnClickListener {
 
 
         });
+        final int finalMonthOfYear = monthOfYear;
+        sharebtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                shareDiary(year, finalMonthOfYear,dayOfMonth,imageFileName);
+            }
+        });
         return root;
     }
+    public void shareDiary(final int year, final int monthOfYear, final int dayOfMonth, String Name){
+        try{ Intent Sharing_intent = new Intent(Intent.ACTION_SEND);
+
+            Sharing_intent.setType("image/*");  //jpg
+            Sharing_intent.setType("text/plain");
+
+            String Test_Message = str + "\n#초록호록 #비건실천 #비건다이어리";  //edtDiary
+
+            Sharing_intent.putExtra(Intent.EXTRA_TEXT, Test_Message);
+            String fileRealName = findFile(Name);
+            String path = path_photo + "/" + fileRealName;
+            final  String filePath =path;
+            Log.d("파일 확인",filePath);
+            Uri uri = FileProvider.getUriForFile(getContext(), "veganproject.provider", new File(filePath));
+            Sharing_intent.putExtra(Intent.EXTRA_STREAM, uri);   //android.content.Intent
+
+            Intent Sharing = Intent.createChooser(Sharing_intent, "공유하기");
+            startActivity(Sharing);}
+        catch (Exception e){
+            e.printStackTrace();
+        }
+    }
+
 
     @Override
     public void onStop() {
@@ -333,7 +368,7 @@ public class dinnerFragment extends Fragment implements View.OnClickListener {
             fis.read(fileData);
             fis.close();
 
-            String str = new String(fileData, "UTF-8");
+             str = new String(fileData, "UTF-8");
             // 읽어서 토스트 메시지로 보여줌
             Toast.makeText(getContext(), "일기 써둔 날", Toast.LENGTH_SHORT).show();
             edtDiary.setText(str);

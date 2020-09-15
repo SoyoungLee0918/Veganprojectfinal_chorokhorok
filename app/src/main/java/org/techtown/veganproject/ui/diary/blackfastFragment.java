@@ -20,6 +20,7 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.core.content.FileProvider;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentActivity;
 
@@ -73,9 +74,12 @@ public class blackfastFragment extends Fragment implements View.OnClickListener 
     String fileName;   //  fileName - 돌고 도는 선택된 날짜의 파일 이름
     String path_photo = Environment.getExternalStorageDirectory().getAbsolutePath() + "/diary_image";
     String imageFileName;
+    String str;
+
     int flag = 0;
     File directory = new File(path_photo);
     File[] files = directory.listFiles();
+    Button sharebtn;
 
     int cYear;
     int cMonth;
@@ -147,16 +151,17 @@ public class blackfastFragment extends Fragment implements View.OnClickListener 
         int cMonth = intent.getExtras().getInt("month");
         int cDay = intent.getExtras().getInt("day");
 
-        int year = intent.getExtras().getInt("s_year");
+        final int year = intent.getExtras().getInt("s_year");
         int monthOfYear = intent.getExtras().getInt("s_month");
         monthOfYear=monthOfYear+1;
-        int dayOfMonth = intent.getExtras().getInt("s_day");
+        final int dayOfMonth = intent.getExtras().getInt("s_day");
 
         datePicker = (DatePicker) root.findViewById(R.id.datePicker);
         viewDatePick = (TextView) root.findViewById(R.id.diary_date);
         edtDiary = (EditText) root.findViewById(R.id.diary_view_content);
         btnSave = (Button) root.findViewById(R.id.diary_save_btn);
         iv_UserPhoto = (ImageView) this.root.findViewById(R.id.user_image);
+        sharebtn = (Button) root.findViewById(R.id.share);
 
         checkDangerousPermissions();
         checkedDay(year, monthOfYear, dayOfMonth);
@@ -244,7 +249,43 @@ public class blackfastFragment extends Fragment implements View.OnClickListener 
 
 
         });
+        final int finalMonthOfYear = monthOfYear;
+        sharebtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                shareDiary(year, finalMonthOfYear,dayOfMonth,imageFileName);
+            }
+        });
         return root;
+    }
+
+
+    public void shareDiary(final int year, final int monthOfYear, final int dayOfMonth, String Name){
+       try{ Intent Sharing_intent = new Intent(Intent.ACTION_SEND);
+
+        Sharing_intent.setType("image/*");  //jpg
+        Sharing_intent.setType("text/plain");
+
+        String Test_Message = str + "\n#초록호록 #비건실천 #비건다이어리";  //edtDiary
+
+        Sharing_intent.putExtra(Intent.EXTRA_TEXT, Test_Message);
+           String fileRealName = findFile(Name);
+           String path = path_photo + "/" + fileRealName;
+           final  String filePath =path;
+        Log.d("파일 확인",filePath);
+        Uri uri = FileProvider.getUriForFile(getContext(), "veganproject.provider", new File(filePath));
+
+        if (str==null){
+            Log.d("str은 null인상태","");
+        }
+
+        Sharing_intent.putExtra(Intent.EXTRA_STREAM, uri);   //android.content.Intent
+        Intent Sharing = Intent.createChooser(Sharing_intent, "공유하기");
+        startActivity(Sharing);
+       }
+       catch (Exception e){
+           e.printStackTrace();
+       }
     }
 
     @Override
@@ -288,7 +329,7 @@ public class blackfastFragment extends Fragment implements View.OnClickListener 
     }
 
     // 일기의 유무를 확인 후 저장된 일기를 불러오고 수정 혹은 작성시 파일 생성
-    public void checkedDay(int year, int monthOfYear, int dayOfMonth) {
+    public void checkedDay(final int year, final int monthOfYear, final int dayOfMonth) {
 
         // 이미지 파일 이름 ( diary_image 시간 + 아침 )
         String timeStamp = year + "" + monthOfYear + "" + dayOfMonth ;
@@ -310,12 +351,13 @@ public class blackfastFragment extends Fragment implements View.OnClickListener 
             fis.read(fileData);
             fis.close();
 
-            String str = new String(fileData, "UTF-8");
+            str = new String(fileData, "UTF-8");
             // 읽어서 토스트 메시지로 보여줌
             Toast.makeText(getContext(), "일기 써둔 날", Toast.LENGTH_SHORT).show();
             edtDiary.setText(str);
             btnSave.setText("수정하기");
             flag = 1;
+
         } catch (Exception e) { // UnsupportedEncodingException , FileNotFoundException , IOException
             // 없어서 오류가 나면 일기가 없는 것 -> 일기를 쓰게 한다.
             Toast.makeText(getContext(), "일기 없는 날", Toast.LENGTH_SHORT).show();
@@ -602,10 +644,11 @@ public class blackfastFragment extends Fragment implements View.OnClickListener 
             // String.getBytes() = 스트링을 배열형으로 변환?
             fos.write(content.getBytes());
             //fos.flush();
-            fos.close();
+            //fos.close();
 
             // getApplicationContext() = 현재 클래스.this ?
             Toast.makeText(getContext(), "일기 저장됨", Toast.LENGTH_SHORT).show();
+
 
         } catch (Exception e) { // Exception - 에러 종류 제일 상위 // FileNotFoundException , IOException
             e.printStackTrace();
@@ -642,7 +685,12 @@ public class blackfastFragment extends Fragment implements View.OnClickListener 
             Uri uri = getUriFromPath(path);
             InputStream in = getActivity().getContentResolver().openInputStream(uri);
             Bitmap bitmap = BitmapFactory.decodeStream(in);
-            iv_UserPhoto.setImageBitmap(bitmap);
+            if (bitmap==null){
+                iv_UserPhoto.setImageBitmap(null);
+            }else {
+                iv_UserPhoto.setImageBitmap(bitmap);
+            }
+            Log.d("사진 경로 확인 setimage",path);
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         }
